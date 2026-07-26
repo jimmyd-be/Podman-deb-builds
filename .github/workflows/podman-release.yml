@@ -126,7 +126,8 @@ jobs:
           version_output="$(podman --version)"
           echo "$version_output"
 
-          if [[ "$version_output" != *"$EXPECTED_VERSION"* ]]; then
+          expected_version="${EXPECTED_VERSION#v}"
+          if [[ "$version_output" != *"$expected_version"* ]]; then
             echo "Installed Podman version '$version_output' does not match expected version '$EXPECTED_VERSION'" >&2
             exit 1
           fi
@@ -168,7 +169,8 @@ jobs:
           version_output="$(podman --version)"
           echo "$version_output"
 
-          if [[ "$version_output" != *"$EXPECTED_VERSION"* ]]; then
+          expected_version="${EXPECTED_VERSION#v}"
+          if [[ "$version_output" != *"$expected_version"* ]]; then
             echo "Installed Podman version '$version_output' does not match expected version '$EXPECTED_VERSION'" >&2
             exit 1
           fi
