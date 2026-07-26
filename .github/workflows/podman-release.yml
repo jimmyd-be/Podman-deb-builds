@@ -123,7 +123,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ./artifacts/amd64/*.deb
 
-          version_output="$(podman --version)"
+          version_output="$(sudo podman --version)"
           echo "$version_output"
 
           expected_version="${EXPECTED_VERSION#v}"
@@ -132,13 +132,13 @@ jobs:
             exit 1
           fi
 
-          podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
+          sudo podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
             echo "podman info failed" >&2
             cat /tmp/podman-info.err >&2
             exit 1
           }
 
-          podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
+          sudo podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
             echo "podman hello-world failed" >&2
             cat /tmp/podman-hello-world.err >&2
             exit 1
@@ -166,7 +166,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ./artifacts/arm64/*.deb
 
-          version_output="$(podman --version)"
+          version_output="$(sudo podman --version)"
           echo "$version_output"
 
           expected_version="${EXPECTED_VERSION#v}"
@@ -175,13 +175,13 @@ jobs:
             exit 1
           fi
 
-          podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
+          sudo podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
             echo "podman info failed" >&2
             cat /tmp/podman-info.err >&2
             exit 1
           }
 
-          podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
+          sudo podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
             echo "podman hello-world failed" >&2
             cat /tmp/podman-hello-world.err >&2
             exit 1
