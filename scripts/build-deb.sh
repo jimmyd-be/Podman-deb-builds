@@ -144,7 +144,8 @@ Section: utils
 Priority: optional
 Architecture: ${package_arch}
 Maintainer: GitHub Actions <actions@github.com>
-Depends: conmon, containers-common, crun, netavark, passt, slirp4netns, fuse-overlayfs, uidmap, libgpgme11, libseccomp2, libsystemd0
+Depends: crun, libgpgme11, libseccomp2, libsystemd0, uidmap
+Recommends: conmon, golang-github-containers-common, netavark, passt, slirp4netns, fuse-overlayfs
 Description: Podman container runtime
  Podman is a daemonless container engine for developing, running, and
  managing OCI containers on Linux systems.
