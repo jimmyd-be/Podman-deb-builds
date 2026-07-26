@@ -24,7 +24,7 @@ jobs:
       should_build: ${{ steps.resolve.outputs.should_build }}
     steps:
       - name: Checkout workflow repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Resolve Podman release
         id: resolve
         env:
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: ./scripts/resolve-release.sh
       - name: Checkout Podman repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ env.PODMAN_REPOSITORY }}
           ref: ${{ needs.resolve-release.outputs.version }}
@@ -45,10 +45,10 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout workflow repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout Podman repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ env.PODMAN_REPOSITORY }}
           ref: ${{ needs.resolve-release.outputs.version }}
@@ -77,10 +77,10 @@ jobs:
     runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout workflow repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout Podman repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ env.PODMAN_REPOSITORY }}
           ref: ${{ needs.resolve-release.outputs.version }}
@@ -109,6 +109,8 @@ jobs:
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04
     steps:
+      - name: Checkout workflow repository
+        uses: actions/checkout@v7
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
