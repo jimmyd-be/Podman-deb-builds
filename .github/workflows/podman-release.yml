@@ -115,12 +115,33 @@ jobs:
           path: artifacts/amd64
 
       - name: Install amd64 Debian package and verify Podman
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y ./artifacts/amd64/*.deb
-          podman --version
+
+          version_output="$(podman --version)"
+          echo "$version_output"
+
+          if [[ "$version_output" != *"$EXPECTED_VERSION"* ]]; then
+            echo "Installed Podman version '$version_output' does not match expected version '$EXPECTED_VERSION'" >&2
+            exit 1
+          fi
+
+          podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
+            echo "podman info failed" >&2
+            cat /tmp/podman-info.err >&2
+            exit 1
+          }
+
+          podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
+            echo "podman hello-world failed" >&2
+            cat /tmp/podman-hello-world.err >&2
+            exit 1
+          }
 
   validate-arm64:
     needs:
@@ -136,12 +157,33 @@ jobs:
           path: artifacts/arm64
 
       - name: Install arm64 Debian package and verify Podman
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y ./artifacts/arm64/*.deb
-          podman --version
+
+          version_output="$(podman --version)"
+          echo "$version_output"
+
+          if [[ "$version_output" != *"$EXPECTED_VERSION"* ]]; then
+            echo "Installed Podman version '$version_output' does not match expected version '$EXPECTED_VERSION'" >&2
+            exit 1
+          fi
+
+          podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
+            echo "podman info failed" >&2
+            cat /tmp/podman-info.err >&2
+            exit 1
+          }
+
+          podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
+            echo "podman hello-world failed" >&2
+            cat /tmp/podman-hello-world.err >&2
+            exit 1
+          }
 
   publish-release:
     needs:
