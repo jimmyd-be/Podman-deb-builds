@@ -35,8 +35,13 @@ if command -v apt-get >/dev/null 2>&1; then
     dpkg-dev \
     git \
     golang-go \
+    libgpgme-dev \
+    libseccomp-dev \
+    libsystemd-dev \
     make \
-    pkg-config
+    pkg-config \
+    gcc \
+    libc6-dev
 fi
 
 if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
@@ -74,7 +79,9 @@ case "$TARGET_ARCH" in
 esac
 
 export GOOS=linux
-export CGO_ENABLED=0
+export CGO_ENABLED=1
+export CGO_CFLAGS="-I/usr/include"
+export CGO_LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
 
 make podman
 
