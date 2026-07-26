@@ -218,8 +218,6 @@ jobs:
       - resolve-release
       - build-amd64
       - build-arm64
-      - validate-amd64
-      - validate-arm64
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04
     steps:
