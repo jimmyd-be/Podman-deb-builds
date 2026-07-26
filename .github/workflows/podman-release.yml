@@ -126,15 +126,15 @@ jobs:
 
           sudo mkdir -p /etc/containers
           sudo tee /etc/containers/registries.conf >/dev/null <<'EOF'
-[registries.search]
-registries = ['docker.io']
+          [registries.search]
+          registries = ['docker.io']
 
-[registries.insecure]
-registries = []
+          [registries.insecure]
+          registries = []
 
-[registries.block]
-registries = []
-EOF
+          [registries.block]
+          registries = []
+          EOF
 
           version_output="$(sudo podman --version)"
           echo "$version_output"
@@ -182,15 +182,15 @@ EOF
 
           sudo mkdir -p /etc/containers
           sudo tee /etc/containers/registries.conf >/dev/null <<'EOF'
-[registries.search]
-registries = ['docker.io']
+          [registries.search]
+          registries = ['docker.io']
 
-[registries.insecure]
-registries = []
+          [registries.insecure]
+          registries = []
 
-[registries.block]
-registries = []
-EOF
+          [registries.block]
+          registries = []
+          EOF
 
           version_output="$(sudo podman --version)"
           echo "$version_output"
