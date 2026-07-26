@@ -27,21 +27,39 @@ if command -v apt-get >/dev/null 2>&1; then
   fi
 
   "${apt_cmd[@]}" update
-  "${apt_cmd[@]}" install -y --no-install-recommends \
-    build-essential \
-    bzip2 \
-    ca-certificates \
-    curl \
-    dpkg-dev \
-    git \
-    golang-go \
-    libgpgme-dev \
-    libseccomp-dev \
-    libsystemd-dev \
-    make \
-    pkg-config \
-    gcc \
+  packages=(
+    build-essential
+    bzip2
+    ca-certificates
+    curl
+    dpkg-dev
+    git
+    golang-go
+    libgpgme-dev
+    libseccomp-dev
+    libsystemd-dev
+    make
+    pkg-config
+    gcc
     libc6-dev
+  )
+
+  case "$TARGET_ARCH" in
+    arm64)
+      packages+=(gcc-aarch64-linux-gnu libc6-dev-arm64-cross)
+      ;;
+    armhf)
+      packages+=(gcc-arm-linux-gnueabihf libc6-dev-armhf-cross)
+      ;;
+    ppc64le)
+      packages+=(gcc-powerpc64le-linux-gnu libc6-dev-ppc64el-cross)
+      ;;
+    s390x)
+      packages+=(gcc-s390x-linux-gnu libc6-dev-s390x-cross)
+      ;;
+  esac
+
+  "${apt_cmd[@]}" install -y --no-install-recommends "${packages[@]}"
 fi
 
 if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
@@ -81,7 +99,32 @@ esac
 export GOOS=linux
 export CGO_ENABLED=1
 export CGO_CFLAGS="-I/usr/include"
-export CGO_LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
+
+case "$TARGET_ARCH" in
+  amd64)
+    export CGO_LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
+    ;;
+  arm64)
+    export CC=aarch64-linux-gnu-gcc
+    export CGO_LDFLAGS="-L/usr/lib/aarch64-linux-gnu"
+    ;;
+  armhf)
+    export CC=arm-linux-gnueabihf-gcc
+    export CGO_LDFLAGS="-L/usr/lib/arm-linux-gnueabihf"
+    ;;
+  ppc64le)
+    export CC=powerpc64le-linux-gnu-gcc
+    export CGO_LDFLAGS="-L/usr/lib/powerpc64le-linux-gnu"
+    ;;
+  s390x)
+    export CC=s390x-linux-gnu-gcc
+    export CGO_LDFLAGS="-L/usr/lib/s390x-linux-gnu"
+    ;;
+  *)
+    echo "Unsupported architecture: $TARGET_ARCH" >&2
+    exit 1
+    ;;
+esac
 
 make podman
 
