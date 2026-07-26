@@ -116,7 +116,8 @@ case "$TARGET_ARCH" in
     ;;
 esac
 
-make podman
+export PODMAN_BUILD_TAGS="apparmor exclude_graphdriver_devicemapper seccomp selinux systemd"
+make podman BUILDTAGS="$PODMAN_BUILD_TAGS"
 
 pkg_dir="$workdir/pkg"
 mkdir -p "$pkg_dir/DEBIAN" "$pkg_dir/usr/bin"
