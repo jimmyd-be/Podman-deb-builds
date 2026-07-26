@@ -20,17 +20,14 @@ jobs:
   build-and-release:
     runs-on: ubuntu-26.04
     steps:
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
       - name: Resolve Podman release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
         shell: bash
         run: ./scripts/resolve-release.sh
-
-      - name: Checkout workflow repository
-        uses: actions/checkout@v4
-        with:
-          path: workspace
 
       - name: Checkout Podman repository
         uses: actions/checkout@v4
