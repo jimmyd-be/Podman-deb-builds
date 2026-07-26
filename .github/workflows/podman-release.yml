@@ -44,7 +44,17 @@ jobs:
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04
     steps:
-    
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Podman repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PODMAN_REPOSITORY }}
+          ref: ${{ needs.resolve-release.outputs.version }}
+          path: podman-src
+
+
       - name: Build amd64 Debian package
         env:
           PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
@@ -66,6 +76,15 @@ jobs:
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04-arm
     steps:
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Podman repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PODMAN_REPOSITORY }}
+          ref: ${{ needs.resolve-release.outputs.version }}
+          path: podman-src
       - name: Build arm64 Debian package
         env:
           PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
