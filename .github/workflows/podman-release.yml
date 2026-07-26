@@ -1,0 +1,139 @@
+name: Build Podman Debian packages
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Override the Podman release tag to build (for example: v5.1.0)'
+        required: false
+        type: string
+      force_build:
+        description: 'Build even if a GitHub release for this version already exists'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  PODMAN_REPOSITORY: podman-container-tools/podman
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      should_build: ${{ steps.resolve.outputs.should_build }}
+    steps:
+      - name: Resolve latest Podman release
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            version="${{ github.event.inputs.version }}"
+          else
+            version="$(gh api repos/${PODMAN_REPOSITORY}/releases/latest --jq '.tag_name')"
+          fi
+
+          if [[ -z "$version" ]]; then
+            echo "Unable to resolve a Podman release tag." >&2
+            exit 1
+          fi
+
+          force_build="${{ github.event.inputs.force_build }}"
+          if [[ "$force_build" == "true" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$version" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build-debs:
+    needs: check-release
+    if: needs.check-release.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            arch: amd64
+          - distro: ubuntu
+            arch: arm64
+          - distro: ubuntu
+            arch: armhf
+          - distro: debian
+            arch: amd64
+          - distro: debian
+            arch: arm64
+          - distro: debian
+            arch: armhf
+          - distro: debian
+            arch: ppc64le
+          - distro: debian
+            arch: s390x
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Debian package
+        env:
+          PODMAN_VERSION: ${{ needs.check-release.outputs.version }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          DISTRO: ${{ matrix.distro }}
+          OUTPUT_DIR: dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/build-deb.sh
+          ./scripts/build-deb.sh
+
+      - name: Upload Debian artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: podman-deb-${{ matrix.distro }}-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
+
+  publish-release:
+    needs:
+      - check-release
+      - build-debs
+    if: needs.check-release.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: podman-deb-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.check-release.outputs.version }}"
+          release_notes="$(gh api repos/${PODMAN_REPOSITORY}/releases/tags/${version} --jq '.body' 2>/dev/null || true)"
+
+          if [[ -z "$release_notes" ]]; then
+            release_notes="Automated Debian and Ubuntu package build for Podman ${version}."
+          fi
+
+          printf '%s\n' "$release_notes" > /tmp/release-notes.md
+          gh release create "$version" artifacts/*.deb \
+            --repo "${{ github.repository }}" \
+            --title "Podman ${version}" \
+            --notes-file /tmp/release-notes.md
