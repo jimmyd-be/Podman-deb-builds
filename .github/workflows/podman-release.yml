@@ -9,11 +9,6 @@ on:
         description: 'Override the Podman release tag to build (for example: v5.1.0)'
         required: false
         type: string
-      force_build:
-        description: 'Build even if a GitHub release for this version already exists'
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -23,7 +18,7 @@ env:
 
 jobs:
   check-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       should_build: ${{ steps.resolve.outputs.should_build }}
@@ -47,10 +42,7 @@ jobs:
             exit 1
           fi
 
-          force_build="${{ github.event.inputs.force_build }}"
-          if [[ "$force_build" == "true" ]]; then
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-          elif gh release view "$version" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+          if gh release view "$version" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
             echo "should_build=true" >> "$GITHUB_OUTPUT"
@@ -61,7 +53,7 @@ jobs:
   build-debs:
     needs: check-release
     if: needs.check-release.outputs.should_build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -95,6 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "Building Podman version: $PODMAN_VERSION"
           chmod +x scripts/build-deb.sh
           ./scripts/build-deb.sh
 
@@ -110,7 +103,7 @@ jobs:
       - check-release
       - build-debs
     if: needs.check-release.outputs.should_build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4

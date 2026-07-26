@@ -20,8 +20,13 @@ trap 'rm -rf "$workdir"' EXIT
 export DEBIAN_FRONTEND=noninteractive
 
 if command -v apt-get >/dev/null 2>&1; then
-  apt-get update
-  apt-get install -y --no-install-recommends \
+  apt_cmd=(apt-get)
+  if command -v sudo >/dev/null 2>&1 && [[ "$(id -u)" -ne 0 ]]; then
+    apt_cmd=(sudo apt-get)
+  fi
+
+  "${apt_cmd[@]}" update
+  "${apt_cmd[@]}" install -y --no-install-recommends \
     build-essential \
     bzip2 \
     ca-certificates \
