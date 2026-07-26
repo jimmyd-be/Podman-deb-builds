@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$GITHUB_WORKSPACE/workspace"
 chmod +x scripts/build-deb.sh
 
 rm -f dist/*.deb || true
