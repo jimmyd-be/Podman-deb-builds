@@ -36,12 +36,41 @@ if command -v apt-get >/dev/null 2>&1; then
     git
     golang-go
     libgpgme-dev
+    libgpgme-dev:arm64
+    libgpgme-dev:armhf
+    libgpgme-dev:ppc64el
+    libgpgme-dev:s390x
     libseccomp-dev
     libsystemd-dev
     make
     pkg-config
     gcc
     libc6-dev
+    btrfs-progs
+    crun
+    git
+    golang-go
+    go-md2man
+    iptables
+    libassuan-dev
+    libbtrfs-dev
+    libc6-dev
+    libdevmapper-dev
+    libglib2.0-dev
+    libgpgme-dev
+    libgpg-error-dev
+    libgpg-error-dev:arm64
+    libgpg-error-dev:armhf
+    libgpg-error-dev:ppc64el
+    libgpg-error-dev:s390x
+    libprotobuf-dev
+    libprotobuf-c-dev
+    libseccomp-dev
+    libselinux1-dev
+    libsystemd-dev
+    netavark
+    pkg-config
+    uidmap
   )
 
   case "$TARGET_ARCH" in
