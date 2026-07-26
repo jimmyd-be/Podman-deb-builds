@@ -31,10 +31,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
         shell: bash
-        run: |
-          ./scripts/resolve-release.sh
-          echo "version=${PODMAN_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "should_build=${SHOULD_BUILD}" >> "$GITHUB_OUTPUT"
+        run: ./scripts/resolve-release.sh
       - name: Checkout Podman repository
         uses: actions/checkout@v4
         with:

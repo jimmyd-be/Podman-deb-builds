@@ -21,6 +21,14 @@ else
   should_build=true
 fi
 
-echo "PODMAN_VERSION=$version" >> "$GITHUB_ENV"
-echo "SHOULD_BUILD=$should_build" >> "$GITHUB_ENV"
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  echo "PODMAN_VERSION=$version" >> "$GITHUB_ENV"
+  echo "SHOULD_BUILD=$should_build" >> "$GITHUB_ENV"
+fi
+
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  echo "version=$version" >> "$GITHUB_OUTPUT"
+  echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
+fi
+
 echo "Building Podman version: $version"
