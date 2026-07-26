@@ -15,8 +15,20 @@ if [[ -z "$release_notes" ]]; then
   release_notes="Automated Debian and Ubuntu package build for Podman ${version}."
 fi
 
+artifact_dir="${ARTIFACT_DIR:-artifacts}"
+if [[ ! -d "$artifact_dir" ]]; then
+  echo "Artifacts directory not found: $artifact_dir" >&2
+  exit 1
+fi
+
+packages=("$artifact_dir"/*.deb)
+if [[ ${#packages[@]} -eq 0 || ! -f "${packages[0]}" ]]; then
+  echo "No .deb files found in $artifact_dir" >&2
+  exit 1
+fi
+
 printf '%s\n' "$release_notes" > /tmp/release-notes.md
-gh release create "$version" dist/*.deb \
+gh release create "$version" "${packages[@]}" \
   --repo "${GITHUB_REPOSITORY:-}" \
   --title "Podman ${version}" \
   --notes-file /tmp/release-notes.md

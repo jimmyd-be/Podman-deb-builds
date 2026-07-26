@@ -101,11 +101,55 @@ jobs:
           path: dist/*.deb
           if-no-files-found: error
 
+  validate-amd64:
+    needs:
+      - resolve-release
+      - build-amd64
+    if: needs.resolve-release.outputs.should_build == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Download amd64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: podman-deb-amd64
+          path: artifacts/amd64
+
+      - name: Install amd64 Debian package and verify Podman
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ./artifacts/amd64/*.deb
+          podman --version
+
+  validate-arm64:
+    needs:
+      - resolve-release
+      - build-arm64
+    if: needs.resolve-release.outputs.should_build == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - name: Download arm64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: podman-deb-arm64
+          path: artifacts/arm64
+
+      - name: Install arm64 Debian package and verify Podman
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ./artifacts/arm64/*.deb
+          podman --version
+
   publish-release:
     needs:
       - resolve-release
       - build-amd64
       - build-arm64
+      - validate-amd64
+      - validate-arm64
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04
     steps:
