@@ -10,6 +10,9 @@ The packages are built from the official Podman source tree and compiled with th
 - systemd
 - exclude_graphdriver_devicemapper
 
+## Tested on
+- Ubuntu 26.04
+
 ## What the workflow does
 
 - Runs on a daily schedule and can also be triggered manually.
