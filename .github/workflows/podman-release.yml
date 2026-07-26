@@ -25,6 +25,7 @@ jobs:
     steps:
       - name: Checkout workflow repository
         uses: actions/checkout@v4
+
       - name: Resolve Podman release
         id: resolve
         env:
@@ -35,11 +36,12 @@ jobs:
           ./scripts/resolve-release.sh
           echo "version=${PODMAN_VERSION}" >> "$GITHUB_OUTPUT"
           echo "should_build=${SHOULD_BUILD}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout Podman repository
         uses: actions/checkout@v4
         with:
           repository: ${{ env.PODMAN_REPOSITORY }}
-          ref: ${{ needs.resolve-release.outputs.version }}
+          ref: ${{ steps.resolve.outputs.version }}
           path: podman-src
 
   build-amd64:
@@ -47,7 +49,16 @@ jobs:
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04
     steps:
-    
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Podman repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PODMAN_REPOSITORY }}
+          ref: ${{ needs.resolve-release.outputs.version }}
+          path: podman-src
+
       - name: Build amd64 Debian package
         env:
           PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
@@ -69,6 +80,16 @@ jobs:
     if: needs.resolve-release.outputs.should_build == 'true'
     runs-on: ubuntu-26.04-arm
     steps:
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Podman repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PODMAN_REPOSITORY }}
+          ref: ${{ needs.resolve-release.outputs.version }}
+          path: podman-src
+
       - name: Build arm64 Debian package
         env:
           PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
