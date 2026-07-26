@@ -17,41 +17,92 @@ env:
   PODMAN_REPOSITORY: podman-container-tools/podman
 
 jobs:
-  build-and-release:
+  resolve-release:
     runs-on: ubuntu-26.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      should_build: ${{ steps.resolve.outputs.should_build }}
     steps:
       - name: Checkout workflow repository
         uses: actions/checkout@v4
       - name: Resolve Podman release
+        id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
         shell: bash
-        run: ./scripts/resolve-release.sh
-
+        run: |
+          ./scripts/resolve-release.sh
+          echo "version=${PODMAN_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "should_build=${SHOULD_BUILD}" >> "$GITHUB_OUTPUT"
       - name: Checkout Podman repository
         uses: actions/checkout@v4
         with:
           repository: ${{ env.PODMAN_REPOSITORY }}
-          ref: ${{ env.PODMAN_VERSION }}
+          ref: ${{ needs.resolve-release.outputs.version }}
           path: podman-src
 
-      - name: Build Debian packages
-        if: env.SHOULD_BUILD == 'true'
+  build-amd64:
+    needs: resolve-release
+    if: needs.resolve-release.outputs.should_build == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+    
+      - name: Build amd64 Debian package
+        env:
+          PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
+          PODMAN_SRC_DIR: ${{ github.workspace }}/podman-src
         shell: bash
-        run: ./scripts/build-packages.sh
+        run: |
+          TARGET_ARCH=amd64 DISTRO=ubuntu OUTPUT_DIR="$GITHUB_WORKSPACE/dist" PODMAN_VERSION="$PODMAN_VERSION" PODMAN_SRC_DIR="$PODMAN_SRC_DIR" ./scripts/build-deb.sh
+          TARGET_ARCH=amd64 DISTRO=debian OUTPUT_DIR="$GITHUB_WORKSPACE/dist" PODMAN_VERSION="$PODMAN_VERSION" PODMAN_SRC_DIR="$PODMAN_SRC_DIR" ./scripts/build-deb.sh
 
-      - name: Upload Debian artifacts
-        if: env.SHOULD_BUILD == 'true'
+      - name: Upload amd64 artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: podman-deb-packages
+          name: podman-deb-amd64
           path: dist/*.deb
           if-no-files-found: error
 
+  build-arm64:
+    needs: resolve-release
+    if: needs.resolve-release.outputs.should_build == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - name: Build arm64 Debian package
+        env:
+          PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
+          PODMAN_SRC_DIR: ${{ github.workspace }}/podman-src
+        shell: bash
+        run: |
+          TARGET_ARCH=arm64 DISTRO=ubuntu OUTPUT_DIR="$GITHUB_WORKSPACE/dist" PODMAN_VERSION="$PODMAN_VERSION" PODMAN_SRC_DIR="$PODMAN_SRC_DIR" ./scripts/build-deb.sh
+          TARGET_ARCH=arm64 DISTRO=debian OUTPUT_DIR="$GITHUB_WORKSPACE/dist" PODMAN_VERSION="$PODMAN_VERSION" PODMAN_SRC_DIR="$PODMAN_SRC_DIR" ./scripts/build-deb.sh
+
+      - name: Upload arm64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: podman-deb-arm64
+          path: dist/*.deb
+          if-no-files-found: error
+
+  publish-release:
+    needs:
+      - resolve-release
+      - build-amd64
+      - build-arm64
+    if: needs.resolve-release.outputs.should_build == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: podman-deb-*
+          path: artifacts
+          merge-multiple: true
+
       - name: Create GitHub release
-        if: env.SHOULD_BUILD == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PODMAN_VERSION: ${{ needs.resolve-release.outputs.version }}
         shell: bash
         run: ./scripts/publish-release.sh

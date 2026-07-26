@@ -9,12 +9,8 @@ mkdir -p dist
 for target in \
   ubuntu:amd64 \
   ubuntu:arm64 \
-  ubuntu:armhf \
   debian:amd64 \
-  debian:arm64 \
-  debian:armhf \
-  debian:ppc64le \
-  debian:s390x
+  debian:arm64
  do
   distro="${target%%:*}"
   arch="${target#*:}"

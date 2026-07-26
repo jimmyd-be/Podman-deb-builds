@@ -36,10 +36,6 @@ if command -v apt-get >/dev/null 2>&1; then
     git
     golang-go
     libgpgme-dev
-    libgpgme-dev:arm64
-    libgpgme-dev:armhf
-    libgpgme-dev:ppc64el
-    libgpgme-dev:s390x
     libseccomp-dev
     libsystemd-dev
     make
@@ -59,10 +55,6 @@ if command -v apt-get >/dev/null 2>&1; then
     libglib2.0-dev
     libgpgme-dev
     libgpg-error-dev
-    libgpg-error-dev:arm64
-    libgpg-error-dev:armhf
-    libgpg-error-dev:ppc64el
-    libgpg-error-dev:s390x
     libprotobuf-dev
     libprotobuf-c-dev
     libseccomp-dev
@@ -76,15 +68,6 @@ if command -v apt-get >/dev/null 2>&1; then
   case "$TARGET_ARCH" in
     arm64)
       packages+=(gcc-aarch64-linux-gnu libc6-dev-arm64-cross)
-      ;;
-    armhf)
-      packages+=(gcc-arm-linux-gnueabihf libc6-dev-armhf-cross)
-      ;;
-    ppc64le)
-      packages+=(gcc-powerpc64le-linux-gnu libc6-dev-ppc64el-cross)
-      ;;
-    s390x)
-      packages+=(gcc-s390x-linux-gnu libc6-dev-s390x-cross)
       ;;
   esac
 
@@ -109,16 +92,6 @@ case "$TARGET_ARCH" in
   arm64)
     export GOARCH=arm64
     ;;
-  armhf)
-    export GOARCH=arm
-    export GOARM=7
-    ;;
-  ppc64le)
-    export GOARCH=ppc64le
-    ;;
-  s390x)
-    export GOARCH=s390x
-    ;;
   *)
     echo "Unsupported architecture: $TARGET_ARCH" >&2
     exit 1
@@ -137,18 +110,6 @@ case "$TARGET_ARCH" in
     export CC=aarch64-linux-gnu-gcc
     export CGO_LDFLAGS="-L/usr/lib/aarch64-linux-gnu"
     ;;
-  armhf)
-    export CC=arm-linux-gnueabihf-gcc
-    export CGO_LDFLAGS="-L/usr/lib/arm-linux-gnueabihf"
-    ;;
-  ppc64le)
-    export CC=powerpc64le-linux-gnu-gcc
-    export CGO_LDFLAGS="-L/usr/lib/powerpc64le-linux-gnu"
-    ;;
-  s390x)
-    export CC=s390x-linux-gnu-gcc
-    export CGO_LDFLAGS="-L/usr/lib/s390x-linux-gnu"
-    ;;
   *)
     echo "Unsupported architecture: $TARGET_ARCH" >&2
     exit 1
@@ -163,20 +124,15 @@ install -m 0755 bin/podman "$pkg_dir/usr/bin/podman"
 
 package_arch="$TARGET_ARCH"
 case "$TARGET_ARCH" in
-  armhf)
-    package_arch="armhf"
-    ;;
   amd64)
     package_arch="amd64"
     ;;
   arm64)
     package_arch="arm64"
     ;;
-  ppc64le)
-    package_arch="ppc64le"
-    ;;
-  s390x)
-    package_arch="s390x"
+  *)
+    echo "Unsupported architecture: $TARGET_ARCH" >&2
+    exit 1
     ;;
 esac
 
