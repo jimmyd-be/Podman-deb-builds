@@ -11,6 +11,7 @@ TARGET_ARCH="${TARGET_ARCH:-amd64}"
 DISTRO="${DISTRO:-ubuntu}"
 OUTPUT_DIR="${OUTPUT_DIR:-dist}"
 REPO_URL="${PODMAN_REPO_URL:-https://github.com/containers/podman.git}"
+PODMAN_SRC_DIR="${PODMAN_SRC_DIR:-}"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -38,10 +39,15 @@ if command -v apt-get >/dev/null 2>&1; then
     pkg-config
 fi
 
-if [[ ! -d "$workdir/src" ]]; then
-  git clone --depth 1 --branch "$VERSION" "$REPO_URL" "$workdir/src"
+if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
+  cp -a "$PODMAN_SRC_DIR"/. "$workdir/src"
+else
+  if [[ ! -d "$workdir/src" ]]; then
+    git clone --depth 1 --branch "$VERSION" "$REPO_URL" "$workdir/src"
+  fi
 fi
 
+mkdir -p "$workdir/src"
 cd "$workdir/src"
 
 case "$TARGET_ARCH" in
