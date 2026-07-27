@@ -222,7 +222,7 @@ case "$TARGET_ARCH" in
     ;;
 esac
 
-export PODMAN_BUILD_TAGS="apparmor exclude_graphdriver_devicemapper seccomp selinux systemd"
+export PODMAN_BUILD_TAGS="seccomp apparmor systemd exclude_graphdriver_devicemapper"
 make podman BUILDTAGS="$PODMAN_BUILD_TAGS"
 
 pkg_dir="$workdir/pkg"
