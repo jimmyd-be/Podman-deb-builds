@@ -12,8 +12,113 @@ DISTRO="${DISTRO:-ubuntu}"
 OUTPUT_DIR="${OUTPUT_DIR:-dist}"
 REPO_URL="${PODMAN_REPO_URL:-https://github.com/containers/podman.git}"
 PODMAN_SRC_DIR="${PODMAN_SRC_DIR:-}"
+UBUNTU_IMAGE="${UBUNTU_IMAGE:-ubuntu:26.04}"
 
 mkdir -p "$OUTPUT_DIR"
+
+if [[ "${BUILD_DEB_IN_CONTAINER:-0}" != "1" ]]; then
+  use_container="${BUILD_DEB_USE_CONTAINER:-auto}"
+  if [[ "$use_container" == "auto" ]]; then
+    if command -v docker >/dev/null 2>&1; then
+      use_container=true
+    elif command -v podman >/dev/null 2>&1; then
+      use_container=true
+    else
+      use_container=false
+    fi
+  fi
+
+  if [[ "$use_container" == "true" || "$use_container" == "1" ]]; then
+    container_runtime=""
+    if command -v docker >/dev/null 2>&1; then
+      container_runtime="docker"
+    elif command -v podman >/dev/null 2>&1; then
+      container_runtime="podman"
+    fi
+
+    if [[ -n "$container_runtime" ]]; then
+      repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+      output_dir_abs="$(cd "$OUTPUT_DIR" && pwd -P)"
+
+      echo "Building Podman in $UBUNTU_IMAGE using $container_runtime"
+
+      local_args=(
+        "$container_runtime" run --rm
+        -e BUILD_DEB_IN_CONTAINER=1
+        -e PODMAN_VERSION="$VERSION"
+        -e TARGET_ARCH="$TARGET_ARCH"
+        -e DISTRO="$DISTRO"
+        -e OUTPUT_DIR=/out
+        -e REPO_URL="$REPO_URL"
+        -e PODMAN_SRC_DIR=/src
+        -v "$repo_root:/workspace"
+        -v "$output_dir_abs:/out"
+        -w /workspace
+        "$UBUNTU_IMAGE"
+        bash -lc './scripts/build-deb.sh'
+      )
+
+      if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
+        local_args+=("-v" "$PODMAN_SRC_DIR:/src:ro")
+      fi
+
+      if [[ "$container_runtime" == "podman" ]]; then
+        local_args=("$container_runtime" run --rm --privileged)
+        local_args+=(-e BUILD_DEB_IN_CONTAINER=1 -e PODMAN_VERSION="$VERSION" -e TARGET_ARCH="$TARGET_ARCH" -e DISTRO="$DISTRO" -e OUTPUT_DIR=/out -e REPO_URL="$REPO_URL" -e PODMAN_SRC_DIR=/src -v "$repo_root:/workspace" -v "$output_dir_abs:/out" -w /workspace "$UBUNTU_IMAGE" bash -lc './scripts/build-deb.sh')
+        if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
+          local_args+=("-v" "$PODMAN_SRC_DIR:/src:ro")
+        fi
+      fi
+
+      # Rebuild the final argument array so the source mount appears before the image name.
+      if [[ "$container_runtime" == "podman" ]]; then
+        local_args=("$container_runtime" run --rm --privileged)
+        local_args+=(-e BUILD_DEB_IN_CONTAINER=1 -e PODMAN_VERSION="$VERSION" -e TARGET_ARCH="$TARGET_ARCH" -e DISTRO="$DISTRO" -e OUTPUT_DIR=/out -e REPO_URL="$REPO_URL" -e PODMAN_SRC_DIR=/src -v "$repo_root:/workspace" -v "$output_dir_abs:/out")
+        if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
+          local_args+=("-v" "$PODMAN_SRC_DIR:/src:ro")
+        fi
+        local_args+=( -w /workspace "$UBUNTU_IMAGE" bash -lc './scripts/build-deb.sh' )
+      else
+        local_args=(
+          "$container_runtime" run --rm
+          -e BUILD_DEB_IN_CONTAINER=1
+          -e PODMAN_VERSION="$VERSION"
+          -e TARGET_ARCH="$TARGET_ARCH"
+          -e DISTRO="$DISTRO"
+          -e OUTPUT_DIR=/out
+          -e REPO_URL="$REPO_URL"
+          -e PODMAN_SRC_DIR=/src
+          -v "$repo_root:/workspace"
+          -v "$output_dir_abs:/out"
+          -w /workspace
+          "$UBUNTU_IMAGE"
+          bash -lc './scripts/build-deb.sh'
+        )
+        if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
+          local_args=(
+            "$container_runtime" run --rm
+            -e BUILD_DEB_IN_CONTAINER=1
+            -e PODMAN_VERSION="$VERSION"
+            -e TARGET_ARCH="$TARGET_ARCH"
+            -e DISTRO="$DISTRO"
+            -e OUTPUT_DIR=/out
+            -e REPO_URL="$REPO_URL"
+            -e PODMAN_SRC_DIR=/src
+            -v "$PODMAN_SRC_DIR:/src:ro"
+            -v "$repo_root:/workspace"
+            -v "$output_dir_abs:/out"
+            -w /workspace
+            "$UBUNTU_IMAGE"
+            bash -lc './scripts/build-deb.sh'
+          )
+        fi
+      fi
+
+      "${local_args[@]}"
+      exit 0
+    fi
+  fi
+fi
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -75,6 +180,7 @@ if command -v apt-get >/dev/null 2>&1; then
 fi
 
 if [[ -n "$PODMAN_SRC_DIR" && -d "$PODMAN_SRC_DIR" ]]; then
+  mkdir -p "$workdir/src"
   cp -a "$PODMAN_SRC_DIR"/. "$workdir/src"
 else
   if [[ ! -d "$workdir/src" ]]; then

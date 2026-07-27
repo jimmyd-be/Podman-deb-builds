@@ -109,53 +109,28 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - name: Download amd64 artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: podman-deb-amd64
           path: artifacts/amd64
 
-      - name: Install amd64 Debian package and verify Podman
+      - name: Validate amd64 Debian package
         env:
           EXPECTED_VERSION: ${{ needs.resolve-release.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get purge -y podman
-          sudo apt-get update
-          sudo apt-get install -y ./artifacts/amd64/*.deb
+          package_path="$(realpath ./artifacts/amd64/*.deb)"
+          package_name="$(basename "$package_path")"
+          repo_root="$(pwd)"
 
-          sudo mkdir -p /etc/containers
-          sudo tee /etc/containers/registries.conf >/dev/null <<'EOF'
-          [registries.search]
-          registries = ['docker.io']
-
-          [registries.insecure]
-          registries = []
-
-          [registries.block]
-          registries = []
-          EOF
-
-          version_output="$(sudo podman --version)"
-          echo "$version_output"
-
-          expected_version="${EXPECTED_VERSION#v}"
-          if [[ "$version_output" != *"$expected_version"* ]]; then
-            echo "Installed Podman version '$version_output' does not match expected version '$EXPECTED_VERSION'" >&2
-            exit 1
-          fi
-
-          sudo podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
-            echo "podman info failed" >&2
-            cat /tmp/podman-info.err >&2
-            exit 1
-          }
-
-          sudo podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
-            echo "podman hello-world failed" >&2
-            cat /tmp/podman-hello-world.err >&2
-            exit 1
-          }
+          docker run --rm \
+            -e EXPECTED_VERSION="$EXPECTED_VERSION" \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "$repo_root:/workspace" \
+            -w /workspace \
+            ubuntu:24.04 \
+            bash -lc "./scripts/validate-deb.sh /workspace/$package_name"
 
   validate-arm64:
     needs:
@@ -165,53 +140,19 @@ jobs:
     runs-on: ubuntu-26.04-arm
     steps:
       - name: Download arm64 artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: podman-deb-arm64
           path: artifacts/arm64
 
-      - name: Install arm64 Debian package and verify Podman
+      - name: Validate arm64 Debian package
         env:
           EXPECTED_VERSION: ${{ needs.resolve-release.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get purge -y podman
-          sudo apt-get update
-          sudo apt-get install -y ./artifacts/arm64/*.deb
-
-          sudo mkdir -p /etc/containers
-          sudo tee /etc/containers/registries.conf >/dev/null <<'EOF'
-          [registries.search]
-          registries = ['docker.io']
-
-          [registries.insecure]
-          registries = []
-
-          [registries.block]
-          registries = []
-          EOF
-
-          version_output="$(sudo podman --version)"
-          echo "$version_output"
-
-          expected_version="${EXPECTED_VERSION#v}"
-          if [[ "$version_output" != *"$expected_version"* ]]; then
-            echo "Installed Podman version '$version_output' does not match expected version '$EXPECTED_VERSION'" >&2
-            exit 1
-          fi
-
-          sudo podman info >/tmp/podman-info.txt 2>/tmp/podman-info.err || {
-            echo "podman info failed" >&2
-            cat /tmp/podman-info.err >&2
-            exit 1
-          }
-
-          sudo podman run --rm hello-world >/tmp/podman-hello-world.txt 2>/tmp/podman-hello-world.err || {
-            echo "podman hello-world failed" >&2
-            cat /tmp/podman-hello-world.err >&2
-            exit 1
-          }
+          package_path="$(realpath ./artifacts/arm64/*.deb)"
+          ./scripts/validate-deb.sh "$package_path"
 
   publish-release:
     needs:
@@ -224,7 +165,7 @@ jobs:
       - name: Checkout workflow repository
         uses: actions/checkout@v7
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: podman-deb-*
           path: artifacts
