@@ -25,7 +25,7 @@ apt-get install -y --no-install-recommends \
 build_companion() {
   local name="$1"
   echo "=== Building ${name} from distro apt source ==="
-  "${SCRIPT_DIR}/build-deb-from-apt-source.sh" \
+  "${SCRIPT_DIR}/build-deb-from-dsc.sh" \
     --source "$name" \
     --out "${OUT_DIR}"
 }
