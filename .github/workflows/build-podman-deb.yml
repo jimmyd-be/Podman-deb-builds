@@ -1,0 +1,135 @@
+name: Build and test Podman .deb packages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly: pick up new Podman releases and refreshed distro build-deps.
+    - cron: "0 6 * * 1"
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      podman_version: ${{ steps.version.outputs.podman_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          chmod +x scripts/latest-podman-version.sh
+          echo "podman_version=$(./scripts/latest-podman-version.sh)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: ubuntu-24.04
+            base_image: ubuntu:24.04
+          - id: ubuntu-26.04
+            base_image: ubuntu:26.04
+          - id: debian-trixie
+            base_image: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build .deb packages in ${{ matrix.base_image }}
+        env:
+          PODMAN_VERSION: ${{ needs.resolve-version.outputs.podman_version }}
+        run: |
+          docker build -f docker/Dockerfile.build \
+            --build-arg "BASE_IMAGE=${{ matrix.base_image }}" \
+            -t "podman-deb-builder:${{ matrix.id }}" .
+          mkdir -p "artifacts/${{ matrix.id }}"
+          docker run --rm \
+            -e "PODMAN_VERSION=${PODMAN_VERSION}" \
+            -e "DISTRO_SLUG=${{ matrix.id }}" \
+            -e "OUT_DIR=/artifacts" \
+            -v "$PWD/artifacts/${{ matrix.id }}:/artifacts" \
+            "podman-deb-builder:${{ matrix.id }}"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: podman-debs-${{ matrix.id }}
+          path: artifacts/${{ matrix.id }}/*.deb
+          if-no-files-found: error
+
+  test:
+    needs: [resolve-version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: ubuntu-24.04
+            test_image: ubuntu:24.04
+          - id: ubuntu-26.04
+            test_image: ubuntu:26.04
+          - id: debian-trixie
+            test_image: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: podman-debs-${{ matrix.id }}
+          path: artifacts
+
+      - name: Install and smoke-test Podman
+        run: |
+          chmod +x scripts/test-install.sh
+          ./scripts/test-install.sh "${{ matrix.test_image }}" "$(pwd)/artifacts"
+
+  release:
+    needs: [resolve-version, build, test]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all built packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: podman-debs-*
+          path: artifacts
+          merge-multiple: false
+
+      - name: Prepare release assets
+        run: |
+          chmod +x scripts/prepare-release-assets.sh
+          ./scripts/prepare-release-assets.sh artifacts release-assets
+
+      - name: Write release notes from Podman changelog
+        env:
+          PODMAN_VERSION: ${{ needs.resolve-version.outputs.podman_version }}
+        run: |
+          chmod +x scripts/podman-release-notes.sh
+          ./scripts/podman-release-notes.sh "$PODMAN_VERSION" > release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PODMAN_VERSION: ${{ needs.resolve-version.outputs.podman_version }}
+        run: |
+          tag="v${PODMAN_VERSION}"
+          title="Podman ${PODMAN_VERSION} (.deb packages)"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$title" --notes-file release-notes.md
+          else
+            gh release create "$tag" --title "$title" --notes-file release-notes.md
+          fi
+          gh release upload "$tag" release-assets/*.deb --clobber

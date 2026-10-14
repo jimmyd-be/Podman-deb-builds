@@ -1,0 +1,15 @@
+ARG BASE_IMAGE=debian:trixie-slim
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY scripts /usr/local/lib/podman-deb-build/scripts
+RUN chmod +x /usr/local/lib/podman-deb-build/scripts/*.sh \
+  && ln -sf /usr/local/lib/podman-deb-build/scripts/build-podman-stack.sh \
+    /usr/local/bin/build-podman-stack.sh
+
+ENTRYPOINT ["/usr/local/bin/build-podman-stack.sh"]
