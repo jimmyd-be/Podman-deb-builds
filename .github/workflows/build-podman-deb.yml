@@ -25,33 +25,52 @@ jobs:
 
   build:
     needs: resolve-version
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - id: ubuntu-24.04
+          - id: ubuntu-24.04-amd64
+            distro_slug: ubuntu-24.04
+            runs-on: ubuntu-24.04
             base_image: ubuntu:24.04
-          - id: ubuntu-26.04
+          - id: ubuntu-24.04-arm64
+            distro_slug: ubuntu-24.04
+            runs-on: ubuntu-24.04-arm
+            base_image: ubuntu:24.04
+          - id: ubuntu-26.04-amd64
+            distro_slug: ubuntu-26.04
+            runs-on: ubuntu-24.04
             base_image: ubuntu:26.04
-          - id: debian-trixie
+          - id: ubuntu-26.04-arm64
+            distro_slug: ubuntu-26.04
+            runs-on: ubuntu-24.04-arm
+            base_image: ubuntu:26.04
+          - id: debian-trixie-amd64
+            distro_slug: debian-trixie
+            runs-on: ubuntu-24.04
+            base_image: debian:trixie-slim
+          - id: debian-trixie-arm64
+            distro_slug: debian-trixie
+            runs-on: ubuntu-24.04-arm
             base_image: debian:trixie-slim
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build .deb packages in ${{ matrix.base_image }}
+      - name: Build .deb packages (${{ matrix.id }})
         env:
           PODMAN_VERSION: ${{ needs.resolve-version.outputs.podman_version }}
         run: |
+          echo "Runner arch: $(uname -m)"
           docker build -f docker/Dockerfile.build \
             --build-arg "BASE_IMAGE=${{ matrix.base_image }}" \
             -t "podman-deb-builder:${{ matrix.id }}" .
           mkdir -p "artifacts/${{ matrix.id }}"
           docker run --rm \
             -e "PODMAN_VERSION=${PODMAN_VERSION}" \
-            -e "DISTRO_SLUG=${{ matrix.id }}" \
+            -e "DISTRO_SLUG=${{ matrix.distro_slug }}" \
             -e "OUT_DIR=/artifacts" \
             -v "$PWD/artifacts/${{ matrix.id }}:/artifacts" \
             "podman-deb-builder:${{ matrix.id }}"
@@ -65,18 +84,30 @@ jobs:
 
   test:
     needs: [resolve-version, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - id: ubuntu-24.04
+          - id: ubuntu-24.04-amd64
+            runs-on: ubuntu-24.04
             test_image: ubuntu:24.04
-          - id: ubuntu-26.04
+          - id: ubuntu-24.04-arm64
+            runs-on: ubuntu-24.04-arm
+            test_image: ubuntu:24.04
+          - id: ubuntu-26.04-amd64
+            runs-on: ubuntu-24.04
             test_image: ubuntu:26.04
-          - id: debian-trixie
+          - id: ubuntu-26.04-arm64
+            runs-on: ubuntu-24.04-arm
+            test_image: ubuntu:26.04
+          - id: debian-trixie-amd64
+            runs-on: ubuntu-24.04
+            test_image: debian:trixie-slim
+          - id: debian-trixie-arm64
+            runs-on: ubuntu-24.04-arm
             test_image: debian:trixie-slim
     steps:
       - uses: actions/checkout@v7

@@ -1,6 +1,6 @@
 # Podman `.deb` builds
 
-Automated builds of [Podman](https://github.com/podman-container-tools/podman) as installable `.deb` packages for **Ubuntu 24.04**, **Ubuntu 26.04**, and **Debian trixie**. Packages are produced in Docker, smoke-tested, and published as [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) in this repository.
+Automated builds of [Podman](https://github.com/podman-container-tools/podman) as installable `.deb` packages for **Ubuntu 24.04**, **Ubuntu 26.04**, and **Debian trixie** on **amd64** and **arm64**. Packages are produced in Docker on native GitHub-hosted runners, smoke-tested, and published as [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) in this repository.
 
 Upstream source and release metadata come from [podman-container-tools/podman](https://github.com/podman-container-tools/podman). Debian packaging metadata is taken from Debian sid `.dsc` files and combined with the latest upstream tarball at build time.
 
@@ -17,11 +17,11 @@ Each distro target produces a small stack of packages:
 
 The primary Podman binary package is renamed for clarity:
 
-- `podman-ubuntu-24.04-{version}.deb`
-- `podman-ubuntu-26.04-{version}.deb`
-- `podman-debian-trixie-{version}.deb`
+- `podman-ubuntu-24.04-{version}_amd64.deb` / `_arm64.deb`
+- `podman-ubuntu-26.04-{version}_amd64.deb` / `_arm64.deb`
+- `podman-debian-trixie-{version}_amd64.deb` / `_arm64.deb`
 
-Companion `.deb` files keep their Debian filenames during the build; on release they are prefixed with the distro id (for example `ubuntu-26.04-netavark_…deb`) so every asset name is unique when all targets are uploaded together.
+Companion `.deb` files keep their Debian architecture suffix (`_amd64`, `_arm64`); on release they are prefixed with the matrix id (for example `ubuntu-26.04-arm64-netavark_…_arm64.deb`) so every asset name is unique when all targets are uploaded together.
 
 ## GitHub Actions workflow
 
@@ -37,7 +37,7 @@ Workflow file: [`.github/workflows/build-podman-deb.yml`](.github/workflows/buil
 Pipeline stages:
 
 1. **Resolve version** — Latest tag from `podman-container-tools/podman` via the GitHub API.
-2. **Build** — Matrix over `ubuntu:24.04`, `ubuntu:26.04`, and `debian:trixie-slim` using `docker/Dockerfile.build`.
+2. **Build** — Matrix over three distros × two architectures (`ubuntu-24.04-arm` runners for arm64, `ubuntu-24.04` for amd64), using `docker/Dockerfile.build` on the matching native platform.
 3. **Test** — Install all `.deb` files from that matrix cell in a clean container and run `podman run` (Alpine smoke test).
 4. **Release** — After tests pass (non-PR events): release notes from the upstream Podman changelog, tag `v{version}`, upload all `.deb` assets.
 
@@ -50,7 +50,7 @@ The release job needs **Read and write** permissions for the `GITHUB_TOKEN` (Rep
 ## Installing from a release
 
 1. Open the release tagged `v{podman-version}` (for example `v6.1.4`).
-2. Download the `.deb` files for your distro (`ubuntu-24.04-*`, `ubuntu-26.04-*`, or `debian-trixie-*`), including companions and the renamed `podman-{distro}-{version}.deb`.
+2. Download the `.deb` files for your distro **and CPU** (for example `ubuntu-24.04-amd64-*` or `ubuntu-24.04-arm64-*` companions, plus `podman-ubuntu-24.04-{version}_amd64.deb` or `_arm64.deb`).
 3. On the target system:
 
 ```bash

@@ -14,7 +14,8 @@ for artifact_dir in "$SRC_ROOT"/podman-debs-*; do
   slug="${artifact_dir##*/podman-debs-}"
   for deb in "$artifact_dir"/*.deb; do
     name="$(basename "$deb")"
-    if [[ "$name" == "podman-${slug}-"* ]]; then
+    # Renamed main package: podman-ubuntu-24.04-6.1.4_amd64.deb
+    if [[ "$name" =~ ^podman-(ubuntu|debian)-.+_[a-z0-9]+\.deb$ ]]; then
       dest="$OUT_DIR/$name"
     else
       dest="$OUT_DIR/${slug}-${name}"
