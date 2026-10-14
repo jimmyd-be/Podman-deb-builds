@@ -30,13 +30,19 @@ build_companion() {
     --out "${OUT_DIR}"
 }
 
-# Companions: use this distro's packaging so build-deps resolve on Ubuntu and Debian.
+# Use the trixie Netavark packaging on every target. Ubuntu's source package can
+# require Rust crate packages that are not available from its repositories.
+DEBIAN_BASE="https://deb.debian.org/debian/pool/main"
+echo "=== Building netavark from Debian trixie packaging ==="
+"${SCRIPT_DIR}/build-deb-from-dsc.sh" \
+  --dsc "${DEBIAN_BASE}/n/netavark/netavark_1.14.0-2.dsc" \
+  --out "${OUT_DIR}"
+
+# Keep the remaining companions on the target distro's packaging.
 build_companion golang-github-containers-common
-build_companion netavark
 build_companion aardvark-dns
 
 # Podman: Debian 6.x packaging + latest upstream tarball (Debian trixie build-deps on Ubuntu).
-DEBIAN_BASE="https://deb.debian.org/debian/pool/main"
 echo "=== Building podman from Debian packaging + upstream v${PODMAN_VERSION} ==="
 "${SCRIPT_DIR}/build-deb-from-dsc.sh" \
   --dsc "${DEBIAN_BASE}/p/podman/podman_6.1.1+ds1-1.dsc" \
