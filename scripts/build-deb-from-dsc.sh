@@ -62,7 +62,7 @@ Package: *
 Pin: release o=Debian
 Pin-Priority: 100
 
-Package: golang-* go-md2man dh-golang debhelper
+Package: golang-* go-md2man dh-golang debhelper cargo rustc dh-cargo libstd-rust-* librust-*
 Pin: release o=Debian
 Pin-Priority: 850
 EOF
