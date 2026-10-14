@@ -8,6 +8,68 @@ usage() {
   exit 1
 }
 
+install_build_deps() {
+  export DEBIAN_FRONTEND=noninteractive
+
+  if mk-build-deps -i -r -t "apt-get -y --allow-downgrades" debian/control; then
+    return 0
+  fi
+
+  echo "mk-build-deps failed; trying apt-get build-dep and dependency fixups" >&2
+
+  shopt -s nullglob
+  for dep_deb in ../*-build-deps_*.deb; do
+    apt-get install -y "$dep_deb" || true
+  done
+
+  apt-get -fy install || true
+  apt-get build-dep -y . || true
+  apt-get -fy install || true
+
+  if dpkg-checkbuilddeps 2>/dev/null; then
+    return 0
+  fi
+
+  echo "Build dependencies are still unsatisfied:" >&2
+  dpkg-checkbuilddeps >&2 || true
+  return 1
+}
+
+setup_ubuntu_debian_build_deps() {
+  if ! grep -qi ubuntu /etc/os-release 2>/dev/null; then
+    return 0
+  fi
+
+  export DEBIAN_FRONTEND=noninteractive
+  local suite="${DEBIAN_BUILD_SUITE:-trixie}"
+
+  apt-get install -y --no-install-recommends debian-archive-keyring
+
+  cat >/etc/apt/sources.list.d/debian-for-build-deps.sources <<EOF
+Types: deb deb-src
+URIs: http://deb.debian.org/debian
+Suites: ${suite}
+Components: main
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+
+  cat >/etc/apt/preferences.d/00podman-build-prefs <<EOF
+Package: *
+Pin: release o=Ubuntu
+Pin-Priority: 800
+
+Package: *
+Pin: release o=Debian
+Pin-Priority: 100
+
+Package: golang-* go-md2man dh-golang debhelper
+Pin: release o=Debian
+Pin-Priority: 850
+EOF
+
+  apt-get update -qq
+}
+
 DSC_URL=""
 SOURCE_PKG=""
 OUT_DIR="/artifacts"
@@ -28,11 +90,6 @@ if [[ -n "$DSC_URL" && -n "$SOURCE_PKG" ]] || [[ -z "$DSC_URL" && -z "$SOURCE_PK
   usage
 fi
 
-script_path="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(cd "$(dirname "$script_path")" && pwd)"
-# shellcheck source=install-build-deps.sh
-source "${SCRIPT_DIR}/install-build-deps.sh"
-
 export DEBIAN_FRONTEND=noninteractive
 export DEB_BUILD_OPTIONS="nocheck parallel=$(nproc)"
 export DEBFULLNAME="${DEBFULLNAME:-Podman CI}"
@@ -45,10 +102,7 @@ cd "$WORKDIR"
 if [[ -n "$SOURCE_PKG" ]]; then
   apt-get source "$SOURCE_PKG"
 else
-  if grep -qi ubuntu /etc/os-release 2>/dev/null; then
-    # shellcheck source=setup-ubuntu-debian-build-deps.sh
-    source "${SCRIPT_DIR}/setup-ubuntu-debian-build-deps.sh"
-  fi
+  setup_ubuntu_debian_build_deps
   dget -u "$DSC_URL"
 fi
 
