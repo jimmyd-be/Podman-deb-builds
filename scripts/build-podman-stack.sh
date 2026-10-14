@@ -5,7 +5,8 @@ set -euo pipefail
 OUT_DIR="${OUT_DIR:-/artifacts}"
 PODMAN_VERSION="${PODMAN_VERSION:-}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$script_path")" && pwd)"
 # shellcheck source=enable-deb-src.sh
 source "${SCRIPT_DIR}/enable-deb-src.sh"
 

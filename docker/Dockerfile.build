@@ -8,8 +8,6 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY scripts /usr/local/lib/podman-deb-build/scripts
-RUN chmod +x /usr/local/lib/podman-deb-build/scripts/*.sh \
-  && ln -sf /usr/local/lib/podman-deb-build/scripts/build-podman-stack.sh \
-    /usr/local/bin/build-podman-stack.sh
+RUN chmod +x /usr/local/lib/podman-deb-build/scripts/*.sh
 
-ENTRYPOINT ["/usr/local/bin/build-podman-stack.sh"]
+ENTRYPOINT ["/usr/local/lib/podman-deb-build/scripts/build-podman-stack.sh"]
