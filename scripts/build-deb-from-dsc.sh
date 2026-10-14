@@ -32,10 +32,15 @@ WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 cd "$WORKDIR"
 
+# -u: allow downloading Debian sources on Ubuntu; dget unpacks by default.
 dget -u "$DSC_URL"
-DSC_FILE="$(basename "$DSC_URL")"
-dpkg-source -x "$DSC_FILE"
-SRC_DIR="$(find . -maxdepth 1 -mindepth 1 -type d ! -name '.*' | head -1)"
+
+SRC_DIR="$(find . -maxdepth 1 -mindepth 1 -type d ! -name '.*' -print -quit)"
+if [[ -z "$SRC_DIR" || ! -d "${SRC_DIR}/debian" ]]; then
+  DSC_FILE="$(basename "$DSC_URL")"
+  dpkg-source -x --no-check "$DSC_FILE"
+  SRC_DIR="$(find . -maxdepth 1 -mindepth 1 -type d ! -name '.*' -print -quit)"
+fi
 cd "$SRC_DIR"
 
 if [[ -n "$PODMAN_UPSTREAM" ]]; then
