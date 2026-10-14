@@ -4,6 +4,7 @@ set -euo pipefail
 
 usage() {
   echo "Usage: $0 --dsc URL [--out DIR] [--podman-upstream VERSION]" >&2
+  echo "          [--debian-build-suite SUITE]" >&2
   echo "   or: $0 --source PACKAGE [--out DIR]" >&2
   exit 1
 }
@@ -35,13 +36,20 @@ install_build_deps() {
   return 1
 }
 
-setup_ubuntu_debian_build_deps() {
-  if ! grep -qi ubuntu /etc/os-release 2>/dev/null; then
+setup_cross_distro_build_deps() {
+  local suite=""
+  if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+    suite="${DEBIAN_BUILD_SUITE:-trixie}"
+  elif grep -qi debian /etc/os-release 2>/dev/null; then
+    suite="$BUILD_DEPS_SUITE"
+    if [[ -z "$suite" ]]; then
+      return 0
+    fi
+  else
     return 0
   fi
 
   export DEBIAN_FRONTEND=noninteractive
-  local suite="${DEBIAN_BUILD_SUITE:-trixie}"
 
   apt-get install -y --no-install-recommends debian-archive-keyring
 
@@ -53,7 +61,8 @@ Components: main
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
 
-  cat >/etc/apt/preferences.d/00podman-build-prefs <<EOF
+  if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+    cat >/etc/apt/preferences.d/00podman-build-prefs <<EOF
 Package: *
 Pin: release o=Ubuntu
 Pin-Priority: 800
@@ -66,6 +75,22 @@ Package: golang-* go-md2man dh-golang debhelper cargo rustc dh-cargo libstd-rust
 Pin: release o=Debian
 Pin-Priority: 850
 EOF
+  else
+    cat >/etc/apt/preferences.d/00podman-build-prefs <<EOF
+
+Package: *
+Pin: release n=trixie
+Pin-Priority: 800
+
+Package: *
+Pin: release n=sid
+Pin-Priority: 100
+
+Package: golang-*
+Pin: release n=sid
+Pin-Priority: 850
+EOF
+  fi
 
   apt-get update -qq
 }
@@ -74,6 +99,7 @@ DSC_URL=""
 SOURCE_PKG=""
 OUT_DIR="/artifacts"
 PODMAN_UPSTREAM=""
+BUILD_DEPS_SUITE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -81,6 +107,7 @@ while [[ $# -gt 0 ]]; do
     --source) SOURCE_PKG="$2"; shift 2 ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     --podman-upstream) PODMAN_UPSTREAM="$2"; shift 2 ;;
+    --debian-build-suite) BUILD_DEPS_SUITE="$2"; shift 2 ;;
     -h|--help) usage ;;
     *) echo "Unknown arg: $1" >&2; usage ;;
   esac
@@ -102,7 +129,7 @@ cd "$WORKDIR"
 if [[ -n "$SOURCE_PKG" ]]; then
   apt-get source "$SOURCE_PKG"
 else
-  setup_ubuntu_debian_build_deps
+  setup_cross_distro_build_deps
   dget -u "$DSC_URL"
 fi
 

@@ -2,7 +2,7 @@
 
 Automated builds of [Podman](https://github.com/podman-container-tools/podman) as installable `.deb` packages for **Ubuntu 24.04**, **Ubuntu 26.04**, and **Debian trixie** on **amd64** and **arm64**. Packages are produced in Docker on native GitHub-hosted runners, smoke-tested, and published as [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) in this repository.
 
-Upstream source and release metadata come from [podman-container-tools/podman](https://github.com/podman-container-tools/podman). Debian packaging metadata is taken from Debian sid `.dsc` files and combined with the latest upstream tarball at build time.
+Upstream source and release metadata come from [podman-container-tools/podman](https://github.com/podman-container-tools/podman). Debian packaging metadata is taken from Debian sid `.dsc` files and combined with the latest upstream tarball at build time; Debian trixie builds use sid Go build dependencies required by that packaging.
 
 ## What gets built
 

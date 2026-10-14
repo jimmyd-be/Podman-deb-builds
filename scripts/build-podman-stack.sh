@@ -42,12 +42,14 @@ echo "=== Building netavark from Debian trixie packaging ==="
 build_companion golang-github-containers-common
 build_companion aardvark-dns
 
-# Podman: Debian 6.x packaging + latest upstream tarball (Debian trixie build-deps on Ubuntu).
+# Podman: Debian 6.x packaging + latest upstream tarball. Its Go build-deps
+# come from Debian sid on trixie; Ubuntu continues to use the trixie suite.
 echo "=== Building podman from Debian packaging + upstream v${PODMAN_VERSION} ==="
 "${SCRIPT_DIR}/build-deb-from-dsc.sh" \
   --dsc "${DEBIAN_BASE}/p/podman/podman_6.1.1+ds1-1.dsc" \
   --out "${OUT_DIR}" \
-  --podman-upstream "$PODMAN_VERSION"
+  --podman-upstream "$PODMAN_VERSION" \
+  --debian-build-suite sid
 
 if [[ -n "${DISTRO_SLUG:-}" ]]; then
   "${SCRIPT_DIR}/rename-podman-debs.sh" "$OUT_DIR" "$DISTRO_SLUG" "$PODMAN_VERSION"
