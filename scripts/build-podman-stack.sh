@@ -22,26 +22,26 @@ apt-get install -y --no-install-recommends \
   devscripts dpkg-dev equivs quilt curl ca-certificates \
   build-essential fakeroot
 
-# Packaging from Debian sid (close to current Podman 6.x).
-DEBIAN_BASE="https://deb.debian.org/debian/pool/main"
-
-build_one() {
-  local letter="$1"
-  local name="$2"
-  local dsc="$3"
-  local podman_upstream="${4:-}"
-  echo "=== Building ${name} from ${dsc} ==="
-  "${SCRIPT_DIR}/build-deb-from-dsc.sh" \
-    --dsc "${DEBIAN_BASE}/${letter}/${name}/${dsc}" \
-    --out "${OUT_DIR}" \
-    ${podman_upstream:+--podman-upstream "$podman_upstream"}
+build_companion() {
+  local name="$1"
+  echo "=== Building ${name} from distro apt source ==="
+  "${SCRIPT_DIR}/build-deb-from-apt-source.sh" \
+    --source "$name" \
+    --out "${OUT_DIR}"
 }
 
-# Companions first (versions from Debian sid pool as of 2026-03).
-build_one g golang-github-containers-common golang-github-containers-common_0.69.1-1.dsc
-build_one n netavark netavark_2.0.0-1.dsc
-build_one a aardvark-dns aardvark-dns_1.17.1-3.dsc
-build_one p podman podman_6.1.1+ds1-1.dsc "$PODMAN_VERSION"
+# Companions: use this distro's packaging so build-deps resolve on Ubuntu and Debian.
+build_companion golang-github-containers-common
+build_companion netavark
+build_companion aardvark-dns
+
+# Podman: Debian 6.x packaging + latest upstream tarball (Debian trixie build-deps on Ubuntu).
+DEBIAN_BASE="https://deb.debian.org/debian/pool/main"
+echo "=== Building podman from Debian packaging + upstream v${PODMAN_VERSION} ==="
+"${SCRIPT_DIR}/build-deb-from-dsc.sh" \
+  --dsc "${DEBIAN_BASE}/p/podman/podman_6.1.1+ds1-1.dsc" \
+  --out "${OUT_DIR}" \
+  --podman-upstream "$PODMAN_VERSION"
 
 if [[ -n "${DISTRO_SLUG:-}" ]]; then
   "${SCRIPT_DIR}/rename-podman-debs.sh" "$OUT_DIR" "$DISTRO_SLUG" "$PODMAN_VERSION"

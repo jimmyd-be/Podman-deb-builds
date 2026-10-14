@@ -23,6 +23,16 @@ done
 
 [[ -n "$DSC_URL" ]] || usage
 
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$script_path")" && pwd)"
+# shellcheck source=install-build-deps.sh
+source "${SCRIPT_DIR}/install-build-deps.sh"
+
+if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+  # shellcheck source=setup-ubuntu-debian-build-deps.sh
+  source "${SCRIPT_DIR}/setup-ubuntu-debian-build-deps.sh"
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 export DEB_BUILD_OPTIONS="nocheck parallel=$(nproc)"
 export DEBFULLNAME="${DEBFULLNAME:-Podman CI}"
@@ -55,10 +65,7 @@ if [[ -n "$PODMAN_UPSTREAM" ]]; then
     -b "CI rebuild for upstream v${PODMAN_UPSTREAM}."
 fi
 
-if ! mk-build-deps -i -r -t "apt-get -y" debian/control; then
-  apt-get build-dep -y . || true
-  mk-build-deps -i -r -t "apt-get -y" debian/control
-fi
+install_build_deps
 
 dpkg-buildpackage -us -uc -b
 

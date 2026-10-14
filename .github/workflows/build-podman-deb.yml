@@ -17,7 +17,7 @@ jobs:
     outputs:
       podman_version: ${{ steps.version.outputs.podman_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: version
         run: |
           chmod +x scripts/latest-podman-version.sh
@@ -39,7 +39,7 @@ jobs:
           - id: debian-trixie
             base_image: debian:trixie-slim
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build .deb packages in ${{ matrix.base_image }}
         env:
@@ -79,7 +79,7 @@ jobs:
           - id: debian-trixie
             test_image: debian:trixie-slim
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download built packages
         uses: actions/download-artifact@v4
@@ -99,7 +99,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download all built packages
         uses: actions/download-artifact@v4

@@ -4,12 +4,23 @@ set -euo pipefail
 
 if [[ -f /etc/debian_version ]] && grep -qi ubuntu /etc/os-release 2>/dev/null; then
   codename="$(. /etc/os-release && echo "${VERSION_CODENAME}")"
+  mirror="${UBUNTU_MIRROR:-http://archive.ubuntu.com/ubuntu}"
+
+  # Official Ubuntu Docker images often ship without universe; container packages live there.
+  if ! grep -qE '[[:space:]]universe' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null; then
+    sed -i \
+      -e "s/ ${codename} main restricted/ ${codename} main restricted universe multiverse/g" \
+      -e "s/ ${codename}-updates main restricted/ ${codename}-updates main restricted universe multiverse/g" \
+      -e "s/ ${codename}-security main restricted/ ${codename}-security main restricted universe multiverse/g" \
+      /etc/apt/sources.list 2>/dev/null || true
+  fi
+
   if ! grep -qE '^deb-src' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; then
     cat >>/etc/apt/sources.list <<EOF
 
-deb-src http://archive.ubuntu.com/ubuntu ${codename} main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu ${codename}-updates main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu ${codename}-security main restricted universe multiverse
+deb-src ${mirror} ${codename} main restricted universe multiverse
+deb-src ${mirror} ${codename}-updates main restricted universe multiverse
+deb-src ${mirror} ${codename}-security main restricted universe multiverse
 EOF
   fi
 elif [[ -f /etc/debian_version ]]; then
